@@ -130,6 +130,9 @@ axios.interceptors.response.use(
           const recent = JSON.parse(window.sessionStorage.getItem(key) || '[]').filter(
             (t) => now - t < 60000,
           )
+          if (recent.length && now - recent[recent.length - 1] < 5000) {
+            return new Promise(() => undefined) // a restart is already under way
+          }
           if (recent.length < 3) {
             recent.push(now)
             window.sessionStorage.setItem(key, JSON.stringify(recent))

@@ -33,6 +33,9 @@ export function restartProxyLogin(): boolean {
     const recent = JSON.parse(window.sessionStorage.getItem(RESTART_KEY) || '[]').filter(
       (t: number) => now - t < 60000,
     )
+    if (recent.length && now - recent[recent.length - 1] < 5000) {
+      return true // a restart is already under way (parallel API calls)
+    }
     if (recent.length >= 3) {
       return false
     }
