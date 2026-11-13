@@ -1,19 +1,42 @@
 <template>
   <div class="users app-wrapper">
+    <el-card v-if="ssoStatus && ssoStatus.enable" class="sso-login-methods" shadow="never" data-test="login-methods">
+      <div class="sso-card-hd">{{ tl('loginMethods') }}</div>
+      <div class="sso-row">
+        <el-switch
+          :model-value="ssoStatus.password_login"
+          :loading="ssoSaving"
+          data-test="password-login-switch"
+          @change="togglePasswordLogin"
+        />
+        <span class="sso-label">{{ tl('allowPasswordLogin') }}</span>
+      </div>
+      <p class="sso-tip">{{ tl('allowPasswordLoginTip') }}</p>
+    </el-card>
     <div class="section-header">
       <div></div>
       <CreateButton @click="showDialog()" />
     </div>
 
     <el-table :data="tableData" v-loading.lock="lockTable">
-      <el-table-column prop="username" :label="tl('username')" />
+      <el-table-column prop="username" :label="tl('username')">
+        <template #default="{ row }">
+          {{ row.username }}
+          <el-tag v-if="isSsoProxyUser(row.username, ssoStatus)" size="small" class="sso-tag">
+            Keycloak
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="description" :label="t('Base.note')" />
       <el-table-column :label="$t('Base.operation')">
         <template #default="{ row }">
           <TableButton @click="showDialog('edit', row)">
             {{ $t('Base.edit') }}
           </TableButton>
-          <TableButton @click="showDialog('chPass', row)">
+          <TableButton
+            v-if="!isSsoProxyUser(row.username, ssoStatus)"
+            @click="showDialog('chPass', row)"
+          >
             {{ tl('changePassword') }}
           </TableButton>
 
@@ -101,6 +124,7 @@
 
 <script setup>
 import { loadUser, createUser, updateUser, destroyUser, changePassword } from '@/api/function.ts'
+import { getSsoProxyStatus, isSsoProxyUser, setPasswordLogin } from '@/api/ssoProxy'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useStore } from 'vuex'
 import { computed, ref, onBeforeMount } from 'vue'
@@ -280,7 +304,58 @@ const deleteConfirm = async (item) => {
   }
 }
 
+const ssoStatus = ref(null)
+const ssoSaving = ref(false)
+const togglePasswordLogin = async (value) => {
+  if (!value) {
+    try {
+      await ElMessageBox.confirm(tl('disablePasswordLoginConfirm'), {
+        confirmButtonText: t('Base.confirm'),
+        cancelButtonText: t('Base.cancel'),
+        type: 'warning',
+      })
+    } catch (e) {
+      return
+    }
+  }
+  ssoSaving.value = true
+  try {
+    const res = await setPasswordLogin(value)
+    ssoStatus.value = { ...ssoStatus.value, password_login: res.password_login }
+    ElMessage.success(t('Base.updateSuccess'))
+  } catch (error) {
+    if (error?.response?.status === 409) {
+      ElMessage.error(tl('disablePasswordLoginNotAllowed'))
+    }
+  } finally {
+    ssoSaving.value = false
+  }
+}
 onBeforeMount(async () => {
+  ssoStatus.value = await getSsoProxyStatus(true)
   await loadData()
 })
 </script>
+
+<style lang="scss">
+.sso-login-methods {
+  margin-bottom: 16px;
+  .sso-card-hd {
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .sso-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .sso-tip {
+    margin: 8px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+  }
+}
+.sso-tag {
+  margin-left: 6px;
+}
+</style>

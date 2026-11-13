@@ -20,7 +20,29 @@
           <div class="form-hd">
             <h1>{{ loginTitle }}</h1>
           </div>
+          <div v-if="ssoState !== 'off'" class="sso-proxy-box" data-test="sso-proxy">
+            <p v-if="ssoState === 'pending'" class="sso-pending">
+              <el-icon class="is-loading"><Loading /></el-icon>
+              {{ t('Base.ssoProxySigningIn') }}
+            </p>
+            <template v-else-if="ssoState === 'failed'">
+              <el-alert
+                type="error"
+                :closable="false"
+                show-icon
+                :title="t('Base.ssoProxyFailed')"
+                :description="ssoError"
+              />
+              <el-button class="sso-retry" type="primary" size="large" @click="trySsoLogin">
+                {{ t('Base.ssoProxyRetry') }}
+              </el-button>
+              <p v-if="!passwordLoginAllowed" class="sso-no-pwd">
+                {{ t('Base.ssoProxyPasswordDisabled') }}
+              </p>
+            </template>
+          </div>
           <el-form
+            v-if="passwordLoginAllowed && ssoState !== 'pending'"
             ref="FormCom"
             :model="record"
             :rules="rules"
@@ -135,13 +157,20 @@
 
 <script lang="ts" setup>
 import { login as loginApi } from '@/api/common'
+import {
+  getSsoProxyStatus,
+  isProxySessionExpired,
+  restartProxyLogin,
+  ssoProxyLogin,
+} from '@/api/ssoProxy'
+import { Loading } from '@element-plus/icons-vue'
 import { changePassword } from '@/api/function'
 import { ADMIN_USERNAMES, DEFAULT_PWD, PASSWORD_REG } from '@/common/constants'
 import useDocLink from '@/hooks/useDocLink'
 import useFormRules from '@/hooks/useFormRules'
 import useEditionConfigs from '@/hooks/useEditionConfigs'
 import { toLogin } from '@/router'
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
@@ -165,6 +194,40 @@ const newPasswordRecord = reactive({
 const isSubmitting = ref(false)
 
 const showChangePwdForm = ref(false)
+
+/* SSO proxy (oauth2-proxy) passwordless login */
+const ssoState = ref<'off' | 'pending' | 'failed'>('pending')
+const ssoError = ref('')
+const passwordLoginAllowed = ref(true)
+const SSO_ERRORS: Record<string, string> = {
+  ROLE_REQUIRED: 'Base.ssoProxyRoleRequired',
+  USER_CONFLICT: 'Base.ssoProxyUserConflict',
+  BAD_ACCESS_TOKEN: 'Base.ssoProxyBadToken',
+  SERVICE_UNAVAILABLE: 'Base.ssoProxyIdpDown',
+}
+const trySsoLogin = async () => {
+  ssoState.value = 'pending'
+  try {
+    const status = await getSsoProxyStatus(true)
+    passwordLoginAllowed.value = status.password_login
+    if (!status.enable) {
+      ssoState.value = 'off'
+      return
+    }
+    const res = await ssoProxyLogin()
+    store.commit('UPDATE_USER_INFO', { token: res.token, username: res.username })
+    store.commit('UPDATE_EDITION', res.license?.edition)
+    redirect()
+  } catch (error: any) {
+    if (isProxySessionExpired(error) && restartProxyLogin()) {
+      return
+    }
+    const code = error?.response?.data?.code
+    ssoError.value = code && SSO_ERRORS[code] ? t(SSO_ERRORS[code]) : error?.response?.data?.message || String(error)
+    ssoState.value = 'failed'
+  }
+}
+onMounted(trySsoLogin)
 const isUsingDefaultPwd = ref(false)
 const rules = {
   username: [{ required: true, message: t('Base.unameRequired') }],
@@ -264,6 +327,23 @@ const submitNewPwd = async () => {
 </script>
 
 <style lang="scss">
+.sso-proxy-box {
+  margin: 24px 0;
+  .sso-pending {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+  }
+  .sso-retry {
+    margin-top: 16px;
+    width: 100%;
+  }
+  .sso-no-pwd {
+    margin-top: 12px;
+    color: var(--color-text-secondary);
+  }
+}
 .login {
   background-color: var(--color-bg-content);
   width: 100vw;

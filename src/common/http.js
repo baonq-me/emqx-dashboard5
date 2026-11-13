@@ -120,6 +120,31 @@ axios.interceptors.response.use(
 
       let { data, status } = error.response
 
+      // sso_proxy: a bare 401 (no EMQX error code) comes from oauth2-proxy (--api-route) after its
+      // session ended; restart the proxy login (same logic as restartProxyLogin in api/ssoProxy.ts,
+      // inlined to avoid an import cycle). At most 3 attempts per minute.
+      if (status === 401 && !(data && data.code)) {
+        try {
+          const key = 'emqx-sso-proxy-restarts'
+          const now = Date.now()
+          const recent = JSON.parse(window.sessionStorage.getItem(key) || '[]').filter(
+            (t) => now - t < 60000,
+          )
+          if (recent.length && now - recent[recent.length - 1] < 5000) {
+            return new Promise(() => undefined) // a restart is already under way
+          }
+          if (recent.length < 3) {
+            recent.push(now)
+            window.sessionStorage.setItem(key, JSON.stringify(recent))
+            const back = window.location.pathname + window.location.search + window.location.hash
+            window.location.href = `/oauth2/start?rd=${encodeURIComponent(back)}`
+            return new Promise(() => undefined)
+          }
+        } catch (e) {
+          // fall through to the normal handling
+        }
+      }
+
       if (!respSet.has(status)) {
         respSet.add(status)
 
