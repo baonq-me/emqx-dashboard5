@@ -283,4 +283,24 @@ export default {
     zh: 'EMQX 为每个客户端连接创建至少一个轻量级进程。每个进程都有自己的消息队列（邮箱）来保存来自其他进程（如 MQTT 消息）的消息，以便进程可以随时从消息队列（邮箱）中读取消息。如果系统繁忙或进程因繁忙的套接字而挂起，消息队列可能会积累大量消息。为避免过度使用内存，当进程的消息队列长度超过此值时，EMQX 将强制关闭该进程。',
     en: 'EMQX creates at least one lightweight process for each client connection. Each process has its own message queue (aka mailbox) to hold messages from other processes (e.g. MQTT messages) so that the process can read messages from the message queue (mailbox) at any time. If the system is busy or the process hangs due to a busy socket (see <code>high_watermark</code>), the message queue can accumulate many messages. To avoid excessive memory usage, EMQX will force a process to shut down when the length of its message queue exceeds <code>max_mailbox_size</code>.',
   },
+  loginMethods: {
+    zh: '登录方式',
+    en: 'Login methods',
+  },
+  allowPasswordLogin: {
+    zh: '允许密码登录',
+    en: 'Allow password login',
+  },
+  allowPasswordLoginTip: {
+    zh: '关闭后只能通过 Keycloak 单点登录访问控制台；API 密钥不受影响。',
+    en: 'When off, the dashboard is only reachable through Keycloak single sign-on; API keys are not affected.',
+  },
+  disablePasswordLoginConfirm: {
+    zh: '确定禁用密码登录吗？之后只能通过 Keycloak 登录控制台。',
+    en: 'Disable password login? Afterwards the dashboard can only be opened through Keycloak.',
+  },
+  disablePasswordLoginNotAllowed: {
+    zh: '只能在 Keycloak 登录的会话中禁用密码登录。',
+    en: 'Password login can only be disabled from a Keycloak session.',
+  },
 }

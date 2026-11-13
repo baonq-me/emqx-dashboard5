@@ -651,4 +651,36 @@ export default {
     zh: '创建时间',
     en: 'Created At',
   },
+  ssoProxySigningIn: {
+    zh: '正在通过 Keycloak 登录…',
+    en: 'Signing in with Keycloak…',
+  },
+  ssoProxyFailed: {
+    zh: '单点登录失败',
+    en: 'Single sign-on failed',
+  },
+  ssoProxyRetry: {
+    zh: '重试单点登录',
+    en: 'Retry single sign-on',
+  },
+  ssoProxyPasswordDisabled: {
+    zh: '密码登录已被管理员禁用。',
+    en: 'Password login has been disabled by an administrator.',
+  },
+  ssoProxyRoleRequired: {
+    zh: '您的账号缺少访问 EMQX 控制台所需的角色。',
+    en: 'Your account lacks the role required for the EMQX dashboard.',
+  },
+  ssoProxyUserConflict: {
+    zh: '已存在同名的本地控制台用户。',
+    en: 'A local dashboard user with the same name already exists.',
+  },
+  ssoProxyBadToken: {
+    zh: '代理转发的访问令牌无效或缺失。',
+    en: 'The access token forwarded by the proxy is missing or invalid.',
+  },
+  ssoProxyIdpDown: {
+    zh: '无法获取身份提供方的密钥。',
+    en: 'The identity provider keys could not be fetched.',
+  },
 }

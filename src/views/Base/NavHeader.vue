@@ -65,6 +65,8 @@
 </template>
 
 <script lang="ts">
+import { getSsoProxyStatus, isSsoProxyUser, ssoSignOutUrl } from '@/api/ssoProxy'
+import { logout as logoutApi } from '@/api/common'
 import { toLogin } from '@/router'
 import { useStore } from 'vuex'
 import { Right, Setting, Search } from '@element-plus/icons-vue'
@@ -111,7 +113,20 @@ export default defineComponent({
         cancelButtonText: t('Base.cancel'),
         type: 'warning',
       })
-        .then(() => {
+        .then(async () => {
+          const status = await getSsoProxyStatus()
+          if (isSsoProxyUser(user.value?.username, status)) {
+            // revoke the EMQX token, then end the oauth2-proxy and Keycloak sessions;
+            // otherwise the login page would sign straight back in
+            try {
+              await logoutApi(user.value.username)
+            } catch (e) {
+              // token may already be gone
+            }
+            store.commit('UPDATE_USER_INFO', { logOut: true })
+            window.location.href = ssoSignOutUrl(status)
+            return
+          }
           ElNotification.success(t('components.loggedOut'))
           toLogin()
         })
