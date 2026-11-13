@@ -120,6 +120,21 @@ axios.interceptors.response.use(
 
       let { data, status } = error.response
 
+      // sso_proxy: a bare 401 (no EMQX error code) comes from oauth2-proxy (--api-route) after its
+      // session ended; reload so the proxy runs the Keycloak login (at most once per 30 s).
+      if (status === 401 && !(data && data.code) && store.state.user?.token) {
+        try {
+          const key = 'emqx-sso-proxy-reload-at'
+          if (Date.now() - Number(window.sessionStorage.getItem(key) || 0) > 30000) {
+            window.sessionStorage.setItem(key, String(Date.now()))
+            window.location.reload()
+            return new Promise(() => undefined)
+          }
+        } catch (e) {
+          // fall through to the normal handling
+        }
+      }
+
       if (!respSet.has(status)) {
         respSet.add(status)
 

@@ -157,7 +157,12 @@
 
 <script lang="ts" setup>
 import { login as loginApi } from '@/api/common'
-import { getSsoProxyStatus, ssoProxyLogin } from '@/api/ssoProxy'
+import {
+  getSsoProxyStatus,
+  isProxySessionExpired,
+  reloadForProxyLogin,
+  ssoProxyLogin,
+} from '@/api/ssoProxy'
 import { Loading } from '@element-plus/icons-vue'
 import { changePassword } from '@/api/function'
 import { ADMIN_USERNAMES, DEFAULT_PWD, PASSWORD_REG } from '@/common/constants'
@@ -214,6 +219,9 @@ const trySsoLogin = async () => {
     store.commit('UPDATE_EDITION', res.license?.edition)
     redirect()
   } catch (error: any) {
+    if (isProxySessionExpired(error) && reloadForProxyLogin()) {
+      return
+    }
     const code = error?.response?.data?.code
     ssoError.value = code && SSO_ERRORS[code] ? t(SSO_ERRORS[code]) : error?.response?.data?.message || String(error)
     ssoState.value = 'failed'
