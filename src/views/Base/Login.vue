@@ -160,7 +160,7 @@ import { login as loginApi } from '@/api/common'
 import {
   getSsoProxyStatus,
   isProxySessionExpired,
-  reloadForProxyLogin,
+  restartProxyLogin,
   ssoProxyLogin,
 } from '@/api/ssoProxy'
 import { Loading } from '@element-plus/icons-vue'
@@ -219,7 +219,7 @@ const trySsoLogin = async () => {
     store.commit('UPDATE_EDITION', res.license?.edition)
     redirect()
   } catch (error: any) {
-    if (isProxySessionExpired(error) && reloadForProxyLogin()) {
+    if (isProxySessionExpired(error) && restartProxyLogin()) {
       return
     }
     const code = error?.response?.data?.code
